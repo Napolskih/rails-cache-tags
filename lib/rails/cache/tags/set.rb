@@ -1,24 +1,26 @@
 # coding: utf-8
 
 require 'rails/cache/tags/tag'
+require 'lru_redux'
 
 module Rails
   module Cache
     module Tags
       class Set
-        # @param [ActiveSupport::Cache::Store] cache
-        def initialize(cache)
-          @cache = cache
+        # @param [ActiveSupport::Cache::Store] store
+        def initialize(store)
+          @store = store
+          @cache = ::LruRedux::TTL::Cache.new(0, 0.seconds)
         end
 
         def current(tag)
-          @cache.fetch_without_tags(tag.to_key) { 1 }.to_i
+          @store.fetch_without_tags(tag.to_key) { 1 }.to_i
         end
 
         def expire(tag)
           version = current(tag) + 1
 
-          @cache.write_without_tags(tag.to_key, version, :expires_in => nil)
+          @store.write_without_tags(tag.to_key, version, :expires_in => nil)
 
           version
         end
@@ -30,14 +32,17 @@ module Rails
           tags = Tag.build(entry.tags.keys)
 
           saved_versions = entry.tags.values.map(&:to_i)
-          current_versions = read_multi(tags).values.map(&:to_i)
 
-          saved_versions == current_versions ? entry.value : nil
+          saved_versions == current_versions(tags) ? entry.value : nil
         end
 
         private
-        def read_multi(tags)
-          @cache.read_multi_without_tags(*Array.wrap(tags).map(&:to_key))
+
+        def current_versions(tags)
+          keys = *Array.wrap(tags).map(&:to_key)
+          @cache.getset(keys.join) do
+            @store.read_multi_without_tags(keys).values.map(&:to_i)
+          end
         end
       end # class Set
     end # module Tags
