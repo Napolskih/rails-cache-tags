@@ -21,7 +21,7 @@ Gem::Specification.new do |gem|
 
   gem.add_development_dependency 'i18n'
   gem.add_development_dependency 'appraisal'
-  gem.add_development_dependency 'minitest', '>= 4.2'
+  gem.add_development_dependency 'minitest', '~= 4.2'
   gem.add_development_dependency 'memcache-client'
   gem.add_development_dependency 'rack'
   gem.add_development_dependency 'mocha'
